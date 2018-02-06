@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!--
+    <meta http-equiv="Content-Security-Policy" 
+          content="frame-ancestors http://127.0.0.1:5500/index.html;">
+    -->
+    <title>Document</title>
+
+    <link href="http://vjs.zencdn.net/5.15.1/video-js.css" rel="stylesheet">
+    <style>
+        body,
+        .video-js {
+            margin: 0;
+            padding: 0;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .quality-levels {
+            position: relative;
+            height: 100%;
+        }
+
+        .quality-levels button {
+            height: 100%;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+
+        .menu-quality {
+
+            -webkit-transition: all .3s;
+            transition: all .3s;
+            visibility: hidden;
+            opacity: 0;
+            list-style: none;
+            position: absolute;
+            text-align: center;
+            width: 100px;
+            /* por si no es compatible el navegador con la propiedad calc*/
+            right: -30px;
+            right: calc(-50px + 50%);
+            bottom: 70%;
+            border-radius: 3px;
+            text-shadow: 0 0 2px rgba(0, 0, 0, .5);
+            background: rgba(28, 28, 28, 0.9);
+            padding: 0;
+            color: white;
+            /*overflow: scroll;*/
+        }
+
+        .menu-quality:hover,
+        .quality-levels button:hover + .menu-quality {
+            bottom: 100%;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .menu-quality li {
+            overflow: hidden;
+            padding: 5px;
+        }
+
+        .menu-quality li:hover {
+            overflow: hidden;
+            cursor: pointer;
+            background: #ffffff2b;
+        }
+
+        .menu-quality li.selected {
+            color: SpringGreen;
+        }
+    </style>
+    <!-- If you'd like to support IE8 -->
+    <script src="http://vjs.zencdn.net/ie8/1.1.2/videojs-ie8.min.js"></script>
+</head>
+
+<body>
+<video id="my-video" class="video-js" controls preload="auto" width="640" height="264" poster=""
+       data-setup="{}"></video>
+
+
+<script src="http://vjs.zencdn.net/5.15.1/video.js"></script>
+<script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+<script src="js/videojs-dash.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-hls/5.12.2/videojs-contrib-hls.js"></script>
+<script src="js/videojs-contrib-quality-levels.min.js"></script>
+
+<script>
+
+    var player = videojs('my-video');
+
+    player.ready(function () {
+
+        var ql = new QualityLevels();
+
+        ql.init();
+        /*
+                    this.src({
+                        src: 'master.m3u8',
+                        type: 'application/x-mpegURL'
+                    });
+                    */
+        this.src({
+            src: 'vp9/dash/my_video_manifest.mpd',
+            type: 'application/dash+xml'
+        });
+
+        console.log(this,
+            //    player.dash.representations()
+        )
+    });
+
+
+    function QualityLevels() {
+
+        function init() {
+
+            videojs.Html5DashJS.hook('beforeinitialize', function (player, mediaPlayer) {
+                console.log("beforeinitialize");
+                mediaPlayer.getDebug().setLogToBrowserConsole(false);
+                mediaPlayer.on('qualityChangeRendered', function (e) {
+
+                    if (e.mediaType == "video") {
+                        var m = player.dash.mediaPlayer;
+
+                        createQualityButton(m.getBitrateInfoListFor('video'), menu);
+
+                    }
+                });
+            });
+            var container = document.createElement('div');
+            container.classList.add("quality-levels");
+
+            var boton = document.createElement('button');
+            boton.classList.add("vjs-icon-cog");
+
+            var menu = document.createElement('ul');
+            createQualityButtonAuto(menu);
+            menu.classList.add("menu-quality");
+
+
+            container.appendChild(boton);
+            container.appendChild(menu);
+
+            document.querySelector('.vjs-control-bar').insertBefore(container, document.querySelector('.vjs-fullscreen-control'));
+
+        }
+
+        function setPlayer(pPlayer) {
+
+        }
+
+        function createQualityButton(qLevels, parent) {
+            console.log("Levels",qLevels);
+            for (var i = 0; i < qLevels.length ; i++) {
+                var qualityLevel = qLevels[i];
+                console.log(i,qualityLevel);
+
+                var button = document.createElement('li');
+                var qh = qualityLevel.height;
+                var qb = qualityLevel.bitrate;
+
+                button.innerHTML = typeof qh !== 'undefined' ? qh + 'p' : qb / 1000 + "kbps";
+
+                button.id = 'quality-level-' + qualityLevel.id;
+                button.onclick = function () {
+
+                    var buttonAuto = document.querySelector('#quality-level-auto');
+                    buttonAuto.classList.remove('selected');
+
+                    var qualityLevels = player.qualityLevels();
+                    for (var i = 0; i < qualityLevels.length; i++) {
+                        var level = qualityLevels[i];
+                        var buttonQuality = document.getElementById('quality-level-' + level.id);
+                        buttonQuality.classList.remove('selected');
+                        level.enabled = false;
+                    }
+
+                    this.classList.add('selected');
+                    qualityLevel.enabled = true;
+
+                };
+
+                insertarHijo(parent, button, parent.children.length - 1);
+            }
+        }
+
+        function insertarHijo(padre, hijo, index) {
+
+            if (padre.children[index].previousSibling === null) {
+                padre.insertBefore(hijo, padre.children[index]);
+            } else if (parseInt(padre.children[index].previousSibling.innerHTML) < parseInt(hijo.innerHTML)) {
+                insertarHijo(padre, hijo, index - 1);
+            } else {
+                padre.insertBefore(hijo, padre.children[index]);
+            }
+        }
+
+        function createQualityButtonAuto(parent) {
+
+            var button = document.createElement('li');
+            button.classList.add('selected');
+            button.innerHTML = "Auto";
+            button.id = "quality-level-auto";
+
+            button.onclick = function () {
+                var qualityLevels = player.qualityLevels();
+                for (var i = 0; i < qualityLevels.length; i++) {
+                    var level = qualityLevels[i];
+                    var buttonQuality = document.getElementById('quality-level-' + level.id);
+                    buttonQuality.classList.remove('selected');
+                    level.enabled = true;
+                }
+
+                button.classList.add('selected');
+            };
+            parent.appendChild(button);
+        }
+
+        this.init = init;
+
+    }
+
+
+</script>
+</body>
+
+</html>

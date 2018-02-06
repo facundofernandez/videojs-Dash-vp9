@@ -1,0 +1,12 @@
+{
+  "name": "h265",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www",
+    "build": "sh public/code.sh"
+  },
+  "dependencies": {
+    "express": "~4.15.5"
+  }
+}
